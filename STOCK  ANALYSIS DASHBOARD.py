@@ -199,6 +199,146 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+st.markdown(
+    """
+    <style>
+    /* =================================================
+       SMOOTH ENTRANCE ANIMATIONS
+    ==================================================*/
+    @keyframes fadeUp {
+        from {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .stApp > div {
+        animation: fadeUp 0.6s ease-out;
+    }
+
+    /* =================================================
+       PRICE EMPHASIS (CURRENT PRICE)
+    ==================================================*/
+    .price-highlight {
+        font-size: 2.2rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        background: linear-gradient(90deg, #58a6ff, #7ee787);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: pulseGlow 2s infinite;
+    }
+
+    @keyframes pulseGlow {
+        0% { text-shadow: 0 0 0 rgba(88,166,255,0.0); }
+        50% { text-shadow: 0 0 18px rgba(88,166,255,0.45); }
+        100% { text-shadow: 0 0 0 rgba(88,166,255,0.0); }
+    }
+
+    /* =================================================
+       CONTEXT BADGES
+    ==================================================*/
+    .context-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        margin-right: 6px;
+    }
+
+    /* =================================================
+       GLASS SEPARATORS
+    ==================================================*/
+    .glass-divider {
+        height: 1px;
+        background: linear-gradient(
+            to right,
+            rgba(255,255,255,0),
+            rgba(255,255,255,0.2),
+            rgba(255,255,255,0)
+        );
+        margin: 18px 0;
+    }
+
+    /* =================================================
+       CHART FOCUS MODE
+    ==================================================*/
+    div[data-testid="stPlotlyChart"]:hover {
+        outline: 2px solid rgba(88,166,255,0.35);
+        outline-offset: -2px;
+    }
+
+    /* =================================================
+       SCROLLBAR (DESKTOP)
+    ==================================================*/
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: rgba(255,255,255,0.05);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: rgba(88,166,255,0.4);
+        border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: rgba(88,166,255,0.7);
+    }
+
+    /* =================================================
+       SKELETON LOADING EFFECT
+    ==================================================*/
+    .skeleton {
+        position: relative;
+        overflow: hidden;
+        background: rgba(255,255,255,0.08);
+        border-radius: 12px;
+    }
+
+    .skeleton::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -150px;
+        height: 100%;
+        width: 150px;
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255,255,255,0.25),
+            transparent
+        );
+        animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+        100% {
+            left: 100%;
+        }
+    }
+
+    /* =================================================
+       SUBTLE DEPTH ON HOVER FOLLOW
+    ==================================================*/
+    div[data-testid="metric-container"]:hover {
+        transform: translateY(-6px) scale(1.01);
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # ===============================
 # DATABASE CONNECTION
