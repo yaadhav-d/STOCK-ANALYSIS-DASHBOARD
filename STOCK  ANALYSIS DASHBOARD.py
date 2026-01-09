@@ -45,25 +45,26 @@ MARKETS = {
 }
 
 # ===============================
-# PERIOD CONFIG (SAFE COMBOS)
+# INTERVAL CONFIG (1 YEAR DEFAULT)
 # ===============================
-PERIOD_CONFIG = {
-    "15 Minutes": ("1d", "15m"),
-    "1 Hour": ("1d", "1m"),
-    "1 Day": ("1d", "5m"),
-    "1 Week": ("5d", "30m"),
-    "1 Month": ("1mo", "1d"),
-    "3 Months": ("3mo", "1d"),
-    "6 Months": ("6mo", "1d"),
-    "1 Year": ("1y", "1d"),
+INTERVAL_CONFIG = {
+    "15 Minutes": "15m",
+    "1 Hour": "1h",
+    "1 Day": "1d",
+    "1 Week": "1wk"
 }
+
+DEFAULT_PERIOD = "1y"
 
 # ===============================
 # YAHOO → DB INSERT
 # ===============================
-def fetch_and_store(symbol, period, interval):
+def fetch_and_store(symbol, interval):
     try:
-        df = yf.Ticker(symbol).history(period=period, interval=interval)
+        df = yf.Ticker(symbol).history(
+            period=DEFAULT_PERIOD,
+            interval=interval
+        )
     except YFRateLimitError:
         return
     except Exception:
@@ -84,11 +85,11 @@ def fetch_and_store(symbol, period, interval):
     }, inplace=True)
 
     df["symbol"] = symbol
-    df = df[[
-        "symbol", "timestamp",
-        "open_price", "high_price",
-        "low_price", "close_price", "volume"
-    ]]
+    df = df[
+        ["symbol", "timestamp",
+         "open_price", "high_price",
+         "low_price", "close_price", "volume"]
+    ]
 
     df.drop_duplicates(subset=["symbol", "timestamp"], inplace=True)
     df.to_sql("stock_prices", engine, if_exists="append", index=False)
@@ -105,9 +106,9 @@ def ensure_initial_data():
         count = 0
 
     if count == 0:
-        fetch_and_store("^NSEI", "6mo", "1d")
-        fetch_and_store("^BSESN", "6mo", "1d")
-        fetch_and_store("TCS.NS", "6mo", "1d")
+        fetch_and_store("^NSEI", "1d")
+        fetch_and_store("^BSESN", "1d")
+        fetch_and_store("TCS.NS", "1d")
 
 ensure_initial_data()
 
@@ -116,7 +117,11 @@ ensure_initial_data()
 # ===============================
 def load_stock(symbol):
     return pd.read_sql(
-        f"SELECT * FROM stock_prices WHERE symbol='{symbol}' ORDER BY timestamp",
+        f"""
+        SELECT * FROM stock_prices
+        WHERE symbol='{symbol}'
+        ORDER BY timestamp
+        """,
         engine
     )
 
@@ -132,6 +137,7 @@ def get_change(symbol):
     )
     if len(df) < 2:
         return None
+
     latest, prev = df.iloc[0][0], df.iloc[1][0]
     return round(latest,2), round(latest-prev,2), round((latest-prev)/prev*100,2)
 
@@ -144,20 +150,25 @@ market = st.sidebar.selectbox("Market", MARKETS.keys())
 stock_name = st.sidebar.selectbox("Stock", MARKETS[market].keys())
 symbol = MARKETS[market][stock_name]
 
-period_label = st.sidebar.selectbox("Period", PERIOD_CONFIG.keys())
-period, interval = PERIOD_CONFIG[period_label]
+interval_label = st.sidebar.selectbox(
+    "Interval",
+    list(INTERVAL_CONFIG.keys()),
+    index=2  # default = 1 Day
+)
+
+interval = INTERVAL_CONFIG[interval_label]
 
 refresh = st.sidebar.button("🔄 Refresh Data")
 
 if refresh:
-    fetch_and_store(symbol, period, interval)
+    fetch_and_store(symbol, interval)
 
 # ===============================
 # MARKET SNAPSHOT
 # ===============================
 st.markdown("## 📊 Market Snapshot")
-cols = st.columns(len(TOP_INDIA_SYMBOLS))
 
+cols = st.columns(len(TOP_INDIA_SYMBOLS))
 for col, (name, sym) in zip(cols, TOP_INDIA_SYMBOLS.items()):
     data = get_change(sym)
     with col:
@@ -179,7 +190,7 @@ if df.empty:
 latest_price = round(df["close_price"].iloc[-1], 2)
 
 # ===============================
-# TECHNICAL INDICATORS (DAILY-BASED)
+# TECHNICAL INDICATORS (DAILY LOGIC)
 # ===============================
 df["SMA20"] = df["close_price"].rolling(20).mean()
 df["SMA50"] = df["close_price"].rolling(50).mean()
@@ -205,7 +216,7 @@ support = df["low_price"].rolling(20).min().iloc[-1]
 resistance = df["high_price"].rolling(20).max().iloc[-1]
 
 # ===============================
-# SHORT-TERM FORECAST (STATISTICAL)
+# SHORT-TERM FORECAST
 # ===============================
 mean_price = df["close_price"].rolling(20).mean().iloc[-1]
 std_dev = df["close_price"].rolling(20).std().iloc[-1]
@@ -233,7 +244,11 @@ with left:
         y0=forecast_low, y1=forecast_high,
         fillcolor="green", opacity=0.08, line_width=0
     )
-    fig.update_layout(template="plotly_dark", height=700, xaxis_rangeslider_visible=False)
+    fig.update_layout(
+        template="plotly_dark",
+        height=700,
+        xaxis_rangeslider_visible=False
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 with right:
@@ -246,7 +261,7 @@ with right:
     st.metric("Support", round(support,2))
     st.metric("Resistance", round(resistance,2))
 
-    st.markdown("### 🔮 Short-Term Forecast")
+    st.markdown("### 🔮 Statistical Forecast")
     st.metric("Expected Range", f"{forecast_low} – {forecast_high}")
 
 st.caption("⚠ Forecast is statistical, not financial advice | DB-driven analytics")
