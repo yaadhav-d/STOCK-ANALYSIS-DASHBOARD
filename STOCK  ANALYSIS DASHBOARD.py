@@ -5,8 +5,6 @@ from sqlalchemy import create_engine
 from urllib.parse import quote_plus
 import yfinance as yf
 from yfinance.exceptions import YFRateLimitError
-import requests
-from datetime import datetime
 
 # ===============================
 # STREAMLIT CONFIG
@@ -25,12 +23,11 @@ engine = create_engine(
 )
 
 # ===============================
-# SYMBOL CONFIG
+# SYMBOL CONFIG (STABLE ONLY)
 # ===============================
 TOP_INDIA_SYMBOLS = {
     "NIFTY 50": "^NSEI",
     "SENSEX": "^BSESN",
-    "BANK NIFTY": "FINNHUB_BANKNIFTY",
 }
 
 MARKETS = {
@@ -49,9 +46,9 @@ PERIOD_TO_DAYS = {
 }
 
 # ===============================
-# YAHOO FETCH (STOCKS + NIFTY)
+# YAHOO → DB INSERT (SAFE)
 # ===============================
-def fetch_and_store_yahoo(symbol, period="6mo"):
+def fetch_and_store(symbol, period="6mo"):
     try:
         df = yf.Ticker(symbol).history(period=period, interval="1d")
     except YFRateLimitError:
@@ -74,45 +71,11 @@ def fetch_and_store_yahoo(symbol, period="6mo"):
     }, inplace=True)
 
     df["symbol"] = symbol
-    df = df[[
-        "symbol", "timestamp",
-        "open_price", "high_price",
-        "low_price", "close_price", "volume"
-    ]]
-
-    df.drop_duplicates(subset=["symbol", "timestamp"], inplace=True)
-    df.to_sql("stock_prices", engine, if_exists="append", index=False)
-
-# ===============================
-# FINNHUB FETCH (BANK NIFTY)
-# ===============================
-def fetch_and_store_banknifty():
-    api_key = st.secrets["finnhub"]["api_key"]
-
-    url = "https://finnhub.io/api/v1/quote"
-    params = {
-        "symbol": "NSEBANK",
-        "token": api_key
-    }
-
-    r = requests.get(url, params=params)
-    data = r.json()
-
-    # Finnhub returns 0 if no data
-    if data.get("c", 0) == 0:
-        return
-
-    now = pd.Timestamp.utcnow().floor("D")
-
-    df = pd.DataFrame([{
-        "symbol": "^NSEBANK",
-        "timestamp": now,
-        "open_price": data["o"],
-        "high_price": data["h"],
-        "low_price": data["l"],
-        "close_price": data["c"],
-        "volume": data.get("v", 0)
-    }])
+    df = df[
+        ["symbol", "timestamp",
+         "open_price", "high_price",
+         "low_price", "close_price", "volume"]
+    ]
 
     df.drop_duplicates(subset=["symbol", "timestamp"], inplace=True)
     df.to_sql("stock_prices", engine, if_exists="append", index=False)
@@ -122,18 +85,17 @@ def fetch_and_store_banknifty():
 # ===============================
 def ensure_initial_data():
     try:
-        cnt = pd.read_sql(
+        count = pd.read_sql(
             "SELECT COUNT(*) AS c FROM stock_prices",
             engine
         )["c"][0]
     except Exception:
-        cnt = 0
+        count = 0
 
-    if cnt == 0:
-        fetch_and_store_yahoo("^NSEI", "6mo")
-        fetch_and_store_yahoo("^BSESN", "6mo")
-        fetch_and_store_banknifty()
-        fetch_and_store_yahoo("TCS.NS", "6mo")
+    if count == 0:
+        fetch_and_store("^NSEI", "6mo")
+        fetch_and_store("^BSESN", "6mo")
+        fetch_and_store("TCS.NS", "6mo")
 
 ensure_initial_data()
 
@@ -183,7 +145,7 @@ period_label = st.sidebar.selectbox("Period", PERIOD_TO_DAYS.keys())
 refresh = st.sidebar.button("🔄 Refresh Data")
 
 if refresh:
-    fetch_and_store_yahoo(symbol, PERIOD_TO_DAYS[period_label])
+    fetch_and_store(symbol, PERIOD_TO_DAYS[period_label])
 
 # ===============================
 # MARKET SNAPSHOT
@@ -193,16 +155,13 @@ st.markdown("## 📊 Market Snapshot")
 cols = st.columns(len(TOP_INDIA_SYMBOLS))
 
 for col, (name, sym) in zip(cols, TOP_INDIA_SYMBOLS.items()):
-    db_symbol = "^NSEBANK" if sym == "FINNHUB_BANKNIFTY" else sym
-    data = get_change(db_symbol)
-
+    data = get_change(sym)
     with col:
         if not data:
             st.metric(name, "N/A")
         else:
             price, change, pct = data
             arrow = "🔺" if change > 0 else "🔻"
-            color = "#00ff99" if change > 0 else "#ff4d4d"
             st.metric(name, price, f"{arrow} {pct}%")
 
 # ===============================
@@ -254,4 +213,4 @@ with right:
     st.metric("Low", round(df["low_price"].min(), 2))
     st.metric("Volume", int(df["volume"].iloc[-1]))
 
-st.caption("⚡ Yahoo + Finnhub hybrid trading dashboard")
+st.caption("⚡ Stable Yahoo Finance–based Trading Dashboard")
