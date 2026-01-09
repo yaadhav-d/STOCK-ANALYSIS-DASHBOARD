@@ -34,9 +34,16 @@ MARKETS = {
     "India 🇮🇳": {
         "Reliance": "RELIANCE.NS",
         "TCS": "TCS.NS",
-        "Infosys": "INFY.NS"
+        "Infosys": "INFY.NS",
+        "Sun Pharma": "SUNPHARMA.NS",
+        "Dr Reddy's": "DRREDDY.NS",
+        "3M India": "3MINDIA.NS",
+        "MRF": "MRF.NS",
+        "Tata Steel": "TATASTEEL.NS",
+        "IDFC First Bank": "IDFCFIRSTB.NS"
     }
 }
+
 
 PERIOD_TO_DAYS = {
     "1 Month": "1mo",
