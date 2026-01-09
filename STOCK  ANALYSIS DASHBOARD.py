@@ -134,7 +134,9 @@ refresh = st.sidebar.button("🔄 Refresh Data")
 if refresh:
     fetch_and_store("^NSEI", "6mo")
     fetch_and_store("^BSESN", "6mo")
+    fetch_and_store("^NSEBANK", "6mo")   # ✅ Bank Nifty
     fetch_and_store(symbol, PERIOD_TO_DAYS[period_label])
+
 
 # ===============================
 # MARKET SNAPSHOT
