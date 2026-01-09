@@ -5,6 +5,8 @@ from sqlalchemy import create_engine
 from urllib.parse import quote_plus
 import yfinance as yf
 from yfinance.exceptions import YFRateLimitError
+import requests
+from datetime import datetime
 
 # ===============================
 # STREAMLIT CONFIG
@@ -28,7 +30,7 @@ engine = create_engine(
 TOP_INDIA_SYMBOLS = {
     "NIFTY 50": "^NSEI",
     "SENSEX": "^BSESN",
-    "BANK NIFTY": "^NSEBANK",
+    "BANK NIFTY": "FINNHUB_BANKNIFTY",
 }
 
 MARKETS = {
@@ -47,9 +49,9 @@ PERIOD_TO_DAYS = {
 }
 
 # ===============================
-# YAHOO → DB INSERT (SAFE)
+# YAHOO FETCH (STOCKS + NIFTY)
 # ===============================
-def fetch_and_store(symbol, period="6mo"):
+def fetch_and_store_yahoo(symbol, period="6mo"):
     try:
         df = yf.Ticker(symbol).history(period=period, interval="1d")
     except YFRateLimitError:
@@ -82,6 +84,46 @@ def fetch_and_store(symbol, period="6mo"):
     df.to_sql("stock_prices", engine, if_exists="append", index=False)
 
 # ===============================
+# FINNHUB FETCH (BANK NIFTY)
+# ===============================
+def fetch_and_store_banknifty():
+    api_key = st.secrets["finnhub"]["api_key"]
+
+    url = "https://finnhub.io/api/v1/index/candle"
+    params = {
+        "symbol": "NSE:NIFTYBANK",
+        "resolution": "D",
+        "from": int(datetime.now().timestamp()) - 86400 * 180,
+        "to": int(datetime.now().timestamp()),
+        "token": api_key
+    }
+
+    r = requests.get(url, params=params)
+    data = r.json()
+
+    if data.get("s") != "ok":
+        return
+
+    df = pd.DataFrame({
+        "timestamp": pd.to_datetime(data["t"], unit="s"),
+        "open_price": data["o"],
+        "high_price": data["h"],
+        "low_price": data["l"],
+        "close_price": data["c"],
+        "volume": data["v"]
+    })
+
+    df["symbol"] = "^NSEBANK"
+    df = df[[
+        "symbol", "timestamp",
+        "open_price", "high_price",
+        "low_price", "close_price", "volume"
+    ]]
+
+    df.drop_duplicates(subset=["symbol", "timestamp"], inplace=True)
+    df.to_sql("stock_prices", engine, if_exists="append", index=False)
+
+# ===============================
 # INITIAL DATA BOOTSTRAP
 # ===============================
 def ensure_initial_data():
@@ -94,10 +136,10 @@ def ensure_initial_data():
         cnt = 0
 
     if cnt == 0:
-        fetch_and_store("^NSEI", "6mo")
-        fetch_and_store("^BSESN", "6mo")
-        fetch_and_store("^NSEBANK", "6mo")
-        fetch_and_store("TCS.NS", "6mo")
+        fetch_and_store_yahoo("^NSEI", "6mo")
+        fetch_and_store_yahoo("^BSESN", "6mo")
+        fetch_and_store_banknifty()
+        fetch_and_store_yahoo("TCS.NS", "6mo")
 
 ensure_initial_data()
 
@@ -146,11 +188,8 @@ symbol = MARKETS[market][stock_name]
 period_label = st.sidebar.selectbox("Period", PERIOD_TO_DAYS.keys())
 refresh = st.sidebar.button("🔄 Refresh Data")
 
-# ===============================
-# MANUAL REFRESH (STOCK ONLY)
-# ===============================
 if refresh:
-    fetch_and_store(symbol, PERIOD_TO_DAYS[period_label])
+    fetch_and_store_yahoo(symbol, PERIOD_TO_DAYS[period_label])
 
 # ===============================
 # MARKET SNAPSHOT
@@ -160,7 +199,9 @@ st.markdown("## 📊 Market Snapshot")
 cols = st.columns(len(TOP_INDIA_SYMBOLS))
 
 for col, (name, sym) in zip(cols, TOP_INDIA_SYMBOLS.items()):
-    data = get_change(sym)
+    db_symbol = "^NSEBANK" if sym == "FINNHUB_BANKNIFTY" else sym
+    data = get_change(db_symbol)
+
     with col:
         if not data:
             st.metric(name, "N/A")
@@ -219,4 +260,4 @@ with right:
     st.metric("Low", round(df["low_price"].min(), 2))
     st.metric("Volume", int(df["volume"].iloc[-1]))
 
-st.caption("⚡ Fully DB-driven TradingView-style Dashboard")
+st.caption("⚡ Yahoo + Finnhub hybrid trading dashboard")
