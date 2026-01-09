@@ -34,10 +34,10 @@ MARKET_BACKGROUNDS = {
 TOP_INDIA_SYMBOLS = {
     "NIFTY 50": "^NSEI",
     "SENSEX": "^BSESN",
-    "RELIANCE": "RELIANCE.NS",
-    "TCS": "TCS.NS",
-    "HDFC BANK": "HDFCBANK.NS",
+    "BANK NIFTY": "^NSEBANK",
+    "FIN NIFTY": "NIFTY_FIN_SERVICE.NS",
 }
+
 
 MARKETS = {
     "India 🇮🇳": {
