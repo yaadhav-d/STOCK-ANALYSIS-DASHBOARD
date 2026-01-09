@@ -5,7 +5,6 @@ from sqlalchemy import create_engine
 from urllib.parse import quote_plus
 import yfinance as yf
 from yfinance.exceptions import YFRateLimitError
-from datetime import datetime
 
 # ===============================
 # STREAMLIT CONFIG
@@ -13,7 +12,7 @@ from datetime import datetime
 st.set_page_config(page_title="📈 Trading Dashboard", layout="wide")
 
 # ===============================
-# DATABASE CONNECTION (UPDATED)
+# DATABASE CONNECTION
 # ===============================
 engine = create_engine(
     f"mysql+mysqlconnector://{st.secrets['mysql']['user']}:"
@@ -23,12 +22,6 @@ engine = create_engine(
     f"{st.secrets['mysql']['database']}"
 )
 
-
-MARKET_BACKGROUNDS = {
-    "India 🇮🇳": "https://images.unsplash.com/photo-1581092334494-5c7b3e1b5f4a",
-    "USA 🇺🇸": "https://images.unsplash.com/photo-1444653614773-995cb1ef9efa"
-}
-
 # ===============================
 # SYMBOL CONFIG
 # ===============================
@@ -36,9 +29,7 @@ TOP_INDIA_SYMBOLS = {
     "NIFTY 50": "^NSEI",
     "SENSEX": "^BSESN",
     "BANK NIFTY": "^NSEBANK",
-    "FIN NIFTY": "NIFTY_FIN_SERVICE.NS",
 }
-
 
 MARKETS = {
     "India 🇮🇳": {
@@ -62,10 +53,8 @@ def fetch_and_store(symbol, period="6mo"):
     try:
         df = yf.Ticker(symbol).history(period=period, interval="1d")
     except YFRateLimitError:
-        st.warning(f"Rate limit hit for {symbol}. Using cached DB data.")
         return
-    except Exception as e:
-        st.warning(f"Error fetching {symbol}: {e}")
+    except Exception:
         return
 
     if df.empty:
@@ -84,13 +73,33 @@ def fetch_and_store(symbol, period="6mo"):
 
     df["symbol"] = symbol
     df = df[[
-        "symbol","timestamp",
-        "open_price","high_price",
-        "low_price","close_price","volume"
+        "symbol", "timestamp",
+        "open_price", "high_price",
+        "low_price", "close_price", "volume"
     ]]
 
+    df.drop_duplicates(subset=["symbol", "timestamp"], inplace=True)
     df.to_sql("stock_prices", engine, if_exists="append", index=False)
 
+# ===============================
+# INITIAL DATA BOOTSTRAP
+# ===============================
+def ensure_initial_data():
+    try:
+        cnt = pd.read_sql(
+            "SELECT COUNT(*) AS c FROM stock_prices",
+            engine
+        )["c"][0]
+    except Exception:
+        cnt = 0
+
+    if cnt == 0:
+        fetch_and_store("^NSEI", "6mo")
+        fetch_and_store("^BSESN", "6mo")
+        fetch_and_store("^NSEBANK", "6mo")
+        fetch_and_store("TCS.NS", "6mo")
+
+ensure_initial_data()
 
 # ===============================
 # DB READ HELPERS
@@ -123,7 +132,7 @@ def get_change(symbol):
     change = latest - prev
     pct = (change / prev) * 100
 
-    return round(latest,2), round(change,2), round(pct,2)
+    return round(latest, 2), round(change, 2), round(pct, 2)
 
 # ===============================
 # SIDEBAR
@@ -138,14 +147,10 @@ period_label = st.sidebar.selectbox("Period", PERIOD_TO_DAYS.keys())
 refresh = st.sidebar.button("🔄 Refresh Data")
 
 # ===============================
-# FORCE DB UPDATE
+# MANUAL REFRESH (STOCK ONLY)
 # ===============================
 if refresh:
-    fetch_and_store("^NSEI", "6mo")
-    fetch_and_store("^BSESN", "6mo")
-    fetch_and_store("^NSEBANK", "6mo")   # ✅ Bank Nifty
     fetch_and_store(symbol, PERIOD_TO_DAYS[period_label])
-
 
 # ===============================
 # MARKET SNAPSHOT
@@ -156,7 +161,6 @@ cols = st.columns(len(TOP_INDIA_SYMBOLS))
 
 for col, (name, sym) in zip(cols, TOP_INDIA_SYMBOLS.items()):
     data = get_change(sym)
-
     with col:
         if not data:
             st.metric(name, "N/A")
@@ -164,20 +168,7 @@ for col, (name, sym) in zip(cols, TOP_INDIA_SYMBOLS.items()):
             price, change, pct = data
             arrow = "🔺" if change > 0 else "🔻"
             color = "#00ff99" if change > 0 else "#ff4d4d"
-
-            st.markdown(
-                f"""
-                <div style="padding:14px;border-radius:14px;
-                            background:#0e1117;text-align:center">
-                    <div style="color:#aaa">{name}</div>
-                    <div style="font-size:24px;font-weight:700">{price}</div>
-                    <div style="color:{color}">
-                        {arrow} {pct:.2f}%
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.metric(name, price, f"{arrow} {pct}%")
 
 # ===============================
 # LOAD SELECTED STOCK
@@ -185,7 +176,7 @@ for col, (name, sym) in zip(cols, TOP_INDIA_SYMBOLS.items()):
 df = load_stock(symbol)
 
 if df.empty:
-    st.error("No data found. Click Refresh Data.")
+    st.warning("No stock data available yet.")
     st.stop()
 
 # ===============================
@@ -197,7 +188,7 @@ df["EMA20"] = df["close_price"].ewm(span=20).mean()
 # ===============================
 # DASHBOARD
 # ===============================
-left, right = st.columns([4,1.5])
+left, right = st.columns([4, 1.5])
 
 with left:
     fig = go.Figure()
@@ -223,9 +214,9 @@ with left:
 
 with right:
     st.markdown("### 📊 Stats")
-    st.metric("Last Price", round(df["close_price"].iloc[-1],2))
-    st.metric("High", round(df["high_price"].max(),2))
-    st.metric("Low", round(df["low_price"].min(),2))
+    st.metric("Last Price", round(df["close_price"].iloc[-1], 2))
+    st.metric("High", round(df["high_price"].max(), 2))
+    st.metric("Low", round(df["low_price"].min(), 2))
     st.metric("Volume", int(df["volume"].iloc[-1]))
 
 st.caption("⚡ Fully DB-driven TradingView-style Dashboard")
