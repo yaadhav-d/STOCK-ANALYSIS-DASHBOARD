@@ -10,6 +10,131 @@ from yfinance.exceptions import YFRateLimitError
 # STREAMLIT CONFIG
 # ===============================
 st.set_page_config(page_title="📈 Trading Dashboard", layout="wide")
+st.markdown(
+    """
+    <style>
+    /* ---------------------------
+       GLOBAL APP STYLING
+    ----------------------------*/
+    .stApp {
+        background:
+            linear-gradient(rgba(10, 15, 25, 0.88), rgba(10, 15, 25, 0.88)),
+            url("https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        color: #e6edf3;
+        font-family: "Inter", sans-serif;
+    }
+
+    /* ---------------------------
+       SIDEBAR
+    ----------------------------*/
+    [data-testid="stSidebar"] {
+        background: rgba(12, 15, 22, 0.96);
+        backdrop-filter: blur(10px);
+        border-right: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* Sidebar titles */
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] h3 {
+        color: #58a6ff;
+        letter-spacing: 0.5px;
+    }
+
+    /* ---------------------------
+       SELECT BOXES & BUTTONS
+    ----------------------------*/
+    .stSelectbox > div,
+    .stButton > button {
+        background: rgba(22, 27, 34, 0.85) !important;
+        color: #e6edf3 !important;
+        border-radius: 10px !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        transition: all 0.25s ease;
+    }
+
+    .stSelectbox > div:hover,
+    .stButton > button:hover {
+        border-color: #58a6ff !important;
+        box-shadow: 0 0 12px rgba(88,166,255,0.35);
+        transform: translateY(-1px);
+    }
+
+    .stButton > button:active {
+        transform: scale(0.97);
+    }
+
+    /* ---------------------------
+       METRIC CARDS
+    ----------------------------*/
+    div[data-testid="metric-container"] {
+        background: rgba(20, 25, 35, 0.75);
+        border-radius: 16px;
+        padding: 16px;
+        border: 1px solid rgba(255,255,255,0.06);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        transition: all 0.3s ease;
+    }
+
+    div[data-testid="metric-container"]:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+        border-color: rgba(88,166,255,0.5);
+    }
+
+    /* Metric labels */
+    div[data-testid="metric-container"] label {
+        color: #8b949e;
+        font-size: 0.9rem;
+    }
+
+    /* Metric values */
+    div[data-testid="metric-container"] div {
+        font-size: 1.3rem;
+        font-weight: 600;
+    }
+
+    /* ---------------------------
+       HEADINGS
+    ----------------------------*/
+    h1, h2, h3 {
+        color: #e6edf3;
+        letter-spacing: 0.3px;
+    }
+
+    h2 {
+        margin-bottom: 0.4rem;
+    }
+
+    /* ---------------------------
+       CHART CONTAINER
+    ----------------------------*/
+    [data-testid="stPlotlyChart"] {
+        background: rgba(15, 20, 30, 0.85);
+        border-radius: 18px;
+        padding: 12px;
+        box-shadow: 0 12px 35px rgba(0,0,0,0.55);
+        transition: all 0.3s ease;
+    }
+
+    [data-testid="stPlotlyChart"]:hover {
+        box-shadow: 0 18px 50px rgba(0,0,0,0.75);
+    }
+
+    /* ---------------------------
+       CAPTION / FOOTER
+    ----------------------------*/
+    .stCaption {
+        color: #8b949e;
+        text-align: center;
+        margin-top: 20px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # ===============================
 # DATABASE CONNECTION
@@ -55,6 +180,42 @@ INTERVAL_CONFIG = {
 }
 
 DEFAULT_PERIOD = "1y"
+st.markdown(
+    """
+    <style>
+    /* Main background image */
+    .stApp {
+        background: 
+            linear-gradient(rgba(10, 15, 25, 0.85), rgba(10, 15, 25, 0.85)),
+            url("https://images.pexels.com/photos/7947709/pexels-photo-7947709.jpeg");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        color: #ffffff;
+    }
+
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        background: rgba(15, 18, 25, 0.95);
+        backdrop-filter: blur(8px);
+    }
+
+    /* Metric cards (glass effect) */
+    div[data-testid="metric-container"] {
+        background: rgba(20, 25, 35, 0.75);
+        border-radius: 14px;
+        padding: 14px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    /* Headers */
+    h1, h2, h3 {
+        color: #e6edf3;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # ===============================
 # YAHOO → DB INSERT
