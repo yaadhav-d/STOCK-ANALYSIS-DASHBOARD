@@ -163,6 +163,8 @@ if df.empty:
     st.warning("No data available.")
     st.stop()
 
+latest_price = round(df["close_price"].iloc[-1], 2)
+
 # ===============================
 # TECHNICAL INDICATORS
 # ===============================
@@ -190,11 +192,10 @@ support = df["low_price"].rolling(20).min().iloc[-1]
 resistance = df["high_price"].rolling(20).max().iloc[-1]
 
 # ===============================
-# SHORT-TERM FORECAST (SAFE)
+# SHORT-TERM FORECAST
 # ===============================
 mean_price = df["close_price"].rolling(20).mean().iloc[-1]
 std_dev = df["close_price"].rolling(20).std().iloc[-1]
-
 forecast_low = round(mean_price - std_dev, 2)
 forecast_high = round(mean_price + std_dev, 2)
 
@@ -222,11 +223,16 @@ with left:
     st.plotly_chart(fig, use_container_width=True)
 
 with right:
+    # 🔹 NEW LABEL SECTION
+    st.markdown(f"## {stock_name}")
+    st.metric("Current Price", latest_price)
+
     st.markdown("### 📊 Trend Analysis")
     st.metric("Trend", trend)
     st.metric("Momentum", strength)
     st.metric("Support", round(support,2))
     st.metric("Resistance", round(resistance,2))
+
     st.markdown("### 🔮 Short-Term Forecast (5-Day)")
     st.metric("Expected Range", f"{forecast_low} – {forecast_high}")
 
