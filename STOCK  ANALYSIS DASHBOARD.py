@@ -13,123 +13,128 @@ st.set_page_config(page_title="📈 Trading Dashboard", layout="wide")
 st.markdown(
     """
     <style>
-    /* ---------------------------
-       GLOBAL APP STYLING
-    ----------------------------*/
+    /* =========================
+       GLOBAL BACKGROUND
+    ==========================*/
     .stApp {
         background:
-            linear-gradient(rgba(10, 15, 25, 0.88), rgba(10, 15, 25, 0.88)),
+            linear-gradient(rgba(12, 18, 28, 0.9), rgba(12, 18, 28, 0.9)),
             url("https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3");
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
         color: #e6edf3;
-        font-family: "Inter", sans-serif;
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont;
     }
 
-    /* ---------------------------
+    /* =========================
        SIDEBAR
-    ----------------------------*/
-    [data-testid="stSidebar"] {
-        background: rgba(12, 15, 22, 0.96);
-        backdrop-filter: blur(10px);
-        border-right: 1px solid rgba(255,255,255,0.05);
+    ==========================*/
+    section[data-testid="stSidebar"] {
+        background: rgba(15, 20, 30, 0.97);
+        border-right: 1px solid rgba(255,255,255,0.06);
     }
 
-    /* Sidebar titles */
-    [data-testid="stSidebar"] h2, 
-    [data-testid="stSidebar"] h3 {
-        color: #58a6ff;
-        letter-spacing: 0.5px;
+    section[data-testid="stSidebar"] * {
+        color: #e6edf3;
     }
 
-    /* ---------------------------
-       SELECT BOXES & BUTTONS
-    ----------------------------*/
-    .stSelectbox > div,
-    .stButton > button {
-        background: rgba(22, 27, 34, 0.85) !important;
-        color: #e6edf3 !important;
+    /* =========================
+       HEADINGS
+    ==========================*/
+    h1, h2, h3 {
+        color: #f0f6fc;
+        letter-spacing: 0.4px;
+    }
+
+    /* =========================
+       SELECTBOX / INPUTS
+    ==========================*/
+    div[data-baseweb="select"] > div {
+        background-color: rgba(22, 27, 34, 0.85) !important;
         border-radius: 10px !important;
-        border: 1px solid rgba(255,255,255,0.08) !important;
-        transition: all 0.25s ease;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        transition: all 0.2s ease-in-out;
     }
 
-    .stSelectbox > div:hover,
-    .stButton > button:hover {
+    div[data-baseweb="select"]:hover > div {
         border-color: #58a6ff !important;
         box-shadow: 0 0 12px rgba(88,166,255,0.35);
+    }
+
+    /* =========================
+       BUTTONS
+    ==========================*/
+    button {
+        background: rgba(22, 27, 34, 0.9) !important;
+        border-radius: 10px !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        color: #e6edf3 !important;
+        transition: all 0.2s ease-in-out;
+    }
+
+    button:hover {
+        border-color: #58a6ff !important;
+        box-shadow: 0 0 14px rgba(88,166,255,0.4);
         transform: translateY(-1px);
     }
 
-    .stButton > button:active {
-        transform: scale(0.97);
+    button:active {
+        transform: scale(0.96);
     }
 
-    /* ---------------------------
+    /* =========================
        METRIC CARDS
-    ----------------------------*/
+    ==========================*/
     div[data-testid="metric-container"] {
-        background: rgba(20, 25, 35, 0.75);
+        background: rgba(22, 27, 34, 0.75);
         border-radius: 16px;
         padding: 16px;
-        border: 1px solid rgba(255,255,255,0.06);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-        transition: all 0.3s ease;
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+        transition: all 0.25s ease;
     }
 
     div[data-testid="metric-container"]:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-        border-color: rgba(88,166,255,0.5);
+        transform: translateY(-3px);
+        box-shadow: 0 18px 45px rgba(0,0,0,0.65);
+        border-color: rgba(88,166,255,0.45);
     }
 
-    /* Metric labels */
+    /* Metric label */
     div[data-testid="metric-container"] label {
         color: #8b949e;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
     }
 
-    /* Metric values */
+    /* Metric value */
     div[data-testid="metric-container"] div {
-        font-size: 1.3rem;
+        font-size: 1.25rem;
         font-weight: 600;
     }
 
-    /* ---------------------------
-       HEADINGS
-    ----------------------------*/
-    h1, h2, h3 {
-        color: #e6edf3;
-        letter-spacing: 0.3px;
-    }
-
-    h2 {
-        margin-bottom: 0.4rem;
-    }
-
-    /* ---------------------------
-       CHART CONTAINER
-    ----------------------------*/
-    [data-testid="stPlotlyChart"] {
+    /* =========================
+       PLOTLY CHART CONTAINER
+    ==========================*/
+    div[data-testid="stPlotlyChart"] {
         background: rgba(15, 20, 30, 0.85);
         border-radius: 18px;
         padding: 12px;
-        box-shadow: 0 12px 35px rgba(0,0,0,0.55);
-        transition: all 0.3s ease;
+        box-shadow: 0 14px 38px rgba(0,0,0,0.6);
+        transition: box-shadow 0.3s ease;
     }
 
-    [data-testid="stPlotlyChart"]:hover {
-        box-shadow: 0 18px 50px rgba(0,0,0,0.75);
+    div[data-testid="stPlotlyChart"]:hover {
+        box-shadow: 0 20px 55px rgba(0,0,0,0.8);
     }
 
-    /* ---------------------------
-       CAPTION / FOOTER
-    ----------------------------*/
+    /* =========================
+       CAPTION
+    ==========================*/
     .stCaption {
-        color: #8b949e;
+        color: #9da7b3;
         text-align: center;
-        margin-top: 20px;
+        margin-top: 24px;
     }
     </style>
     """,
@@ -180,42 +185,6 @@ INTERVAL_CONFIG = {
 }
 
 DEFAULT_PERIOD = "1y"
-st.markdown(
-    """
-    <style>
-    /* Main background image */
-    .stApp {
-        background: 
-            linear-gradient(rgba(10, 15, 25, 0.85), rgba(10, 15, 25, 0.85)),
-            url("https://images.pexels.com/photos/7947709/pexels-photo-7947709.jpeg");
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        color: #ffffff;
-    }
-
-    /* Sidebar styling */
-    [data-testid="stSidebar"] {
-        background: rgba(15, 18, 25, 0.95);
-        backdrop-filter: blur(8px);
-    }
-
-    /* Metric cards (glass effect) */
-    div[data-testid="metric-container"] {
-        background: rgba(20, 25, 35, 0.75);
-        border-radius: 14px;
-        padding: 14px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-
-    /* Headers */
-    h1, h2, h3 {
-        color: #e6edf3;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
 # ===============================
 # YAHOO → DB INSERT
