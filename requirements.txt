@@ -5,3 +5,7 @@ plotly
 sqlalchemy
 mysql-connector-python
 YFRateLimitError
+
+
+
+

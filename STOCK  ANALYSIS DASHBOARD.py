@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
-import yfinance as yf
 import plotly.graph_objects as go
 from sqlalchemy import create_engine
 from urllib.parse import quote_plus
+import yfinance as yf
+from yfinance.exceptions import YFRateLimitError
 from datetime import datetime
 
 # ===============================
@@ -58,7 +59,14 @@ PERIOD_TO_DAYS = {
 # YAHOO → DB INSERT (SAFE)
 # ===============================
 def fetch_and_store(symbol, period="6mo"):
-    df = yf.Ticker(symbol).history(period=period, interval="1d")
+    try:
+        df = yf.Ticker(symbol).history(period=period, interval="1d")
+    except YFRateLimitError:
+        st.warning(f"Rate limit hit for {symbol}. Using cached DB data.")
+        return
+    except Exception as e:
+        st.warning(f"Error fetching {symbol}: {e}")
+        return
 
     if df.empty:
         return
@@ -82,6 +90,7 @@ def fetch_and_store(symbol, period="6mo"):
     ]]
 
     df.to_sql("stock_prices", engine, if_exists="append", index=False)
+
 
 # ===============================
 # DB READ HELPERS
