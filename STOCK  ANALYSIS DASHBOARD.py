@@ -44,19 +44,26 @@ MARKETS = {
     }
 }
 
-PERIOD_TO_DAYS = {
-    "1 Month": "1mo",
-    "3 Months": "3mo",
-    "6 Months": "6mo",
-    "1 Year": "1y"
+# ===============================
+# PERIOD CONFIG (SAFE COMBOS)
+# ===============================
+PERIOD_CONFIG = {
+    "15 Minutes": ("1d", "15m"),
+    "1 Hour": ("1d", "1m"),
+    "1 Day": ("1d", "5m"),
+    "1 Week": ("5d", "30m"),
+    "1 Month": ("1mo", "1d"),
+    "3 Months": ("3mo", "1d"),
+    "6 Months": ("6mo", "1d"),
+    "1 Year": ("1y", "1d"),
 }
 
 # ===============================
 # YAHOO → DB INSERT
 # ===============================
-def fetch_and_store(symbol, period="6mo"):
+def fetch_and_store(symbol, period, interval):
     try:
-        df = yf.Ticker(symbol).history(period=period, interval="1d")
+        df = yf.Ticker(symbol).history(period=period, interval=interval)
     except YFRateLimitError:
         return
     except Exception:
@@ -67,6 +74,7 @@ def fetch_and_store(symbol, period="6mo"):
 
     df.reset_index(inplace=True)
     df.rename(columns={
+        "Datetime": "timestamp",
         "Date": "timestamp",
         "Open": "open_price",
         "High": "high_price",
@@ -86,7 +94,7 @@ def fetch_and_store(symbol, period="6mo"):
     df.to_sql("stock_prices", engine, if_exists="append", index=False)
 
 # ===============================
-# INITIAL DATA BOOTSTRAP
+# INITIAL DATA BOOTSTRAP (DAILY)
 # ===============================
 def ensure_initial_data():
     try:
@@ -97,9 +105,9 @@ def ensure_initial_data():
         count = 0
 
     if count == 0:
-        fetch_and_store("^NSEI", "6mo")
-        fetch_and_store("^BSESN", "6mo")
-        fetch_and_store("TCS.NS", "6mo")
+        fetch_and_store("^NSEI", "6mo", "1d")
+        fetch_and_store("^BSESN", "6mo", "1d")
+        fetch_and_store("TCS.NS", "6mo", "1d")
 
 ensure_initial_data()
 
@@ -131,20 +139,25 @@ def get_change(symbol):
 # SIDEBAR
 # ===============================
 st.sidebar.title("⚙ Controls")
+
 market = st.sidebar.selectbox("Market", MARKETS.keys())
 stock_name = st.sidebar.selectbox("Stock", MARKETS[market].keys())
 symbol = MARKETS[market][stock_name]
-period_label = st.sidebar.selectbox("Period", PERIOD_TO_DAYS.keys())
+
+period_label = st.sidebar.selectbox("Period", PERIOD_CONFIG.keys())
+period, interval = PERIOD_CONFIG[period_label]
+
 refresh = st.sidebar.button("🔄 Refresh Data")
 
 if refresh:
-    fetch_and_store(symbol, PERIOD_TO_DAYS[period_label])
+    fetch_and_store(symbol, period, interval)
 
 # ===============================
 # MARKET SNAPSHOT
 # ===============================
 st.markdown("## 📊 Market Snapshot")
 cols = st.columns(len(TOP_INDIA_SYMBOLS))
+
 for col, (name, sym) in zip(cols, TOP_INDIA_SYMBOLS.items()):
     data = get_change(sym)
     with col:
@@ -166,7 +179,7 @@ if df.empty:
 latest_price = round(df["close_price"].iloc[-1], 2)
 
 # ===============================
-# TECHNICAL INDICATORS
+# TECHNICAL INDICATORS (DAILY-BASED)
 # ===============================
 df["SMA20"] = df["close_price"].rolling(20).mean()
 df["SMA50"] = df["close_price"].rolling(50).mean()
@@ -192,10 +205,11 @@ support = df["low_price"].rolling(20).min().iloc[-1]
 resistance = df["high_price"].rolling(20).max().iloc[-1]
 
 # ===============================
-# SHORT-TERM FORECAST
+# SHORT-TERM FORECAST (STATISTICAL)
 # ===============================
 mean_price = df["close_price"].rolling(20).mean().iloc[-1]
 std_dev = df["close_price"].rolling(20).std().iloc[-1]
+
 forecast_low = round(mean_price - std_dev, 2)
 forecast_high = round(mean_price + std_dev, 2)
 
@@ -223,7 +237,6 @@ with left:
     st.plotly_chart(fig, use_container_width=True)
 
 with right:
-    # 🔹 NEW LABEL SECTION
     st.markdown(f"## {stock_name}")
     st.metric("Current Price", latest_price)
 
@@ -233,7 +246,7 @@ with right:
     st.metric("Support", round(support,2))
     st.metric("Resistance", round(resistance,2))
 
-    st.markdown("### 🔮 Short-Term Forecast (5-Day)")
+    st.markdown("### 🔮 Short-Term Forecast")
     st.metric("Expected Range", f"{forecast_low} – {forecast_high}")
 
 st.caption("⚠ Forecast is statistical, not financial advice | DB-driven analytics")
