@@ -182,7 +182,19 @@ for col, (name, sym) in zip(cols, TOP_INDIA_SYMBOLS.items()):
 # ===============================
 # LOAD STOCK DATA
 # ===============================
-df = load_stock(symbol)
+if interval in ["15m", "1h"]:
+    df = pd.read_sql(
+        f"""
+        SELECT * FROM stock_prices
+        WHERE symbol='{symbol}'
+        AND timestamp >= NOW() - INTERVAL 7 DAY
+        ORDER BY timestamp
+        """,
+        engine
+    )
+else:
+    df = load_stock(symbol)
+
 if df.empty:
     st.warning("No data available.")
     st.stop()
