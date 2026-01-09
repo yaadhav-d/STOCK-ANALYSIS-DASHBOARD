@@ -14,12 +14,71 @@ st.markdown(
     """
     <style>
     /* =========================
+       STICKY RIGHT PANEL
+    ==========================*/
+    .sticky-panel {
+        position: sticky;
+        top: 80px;
+    }
+
+    /* =========================
+       TREND GLOW STATES
+    ==========================*/
+    .bullish {
+        box-shadow: 0 0 25px rgba(0, 255, 120, 0.35);
+        border: 1px solid rgba(0, 255, 120, 0.45);
+    }
+
+    .bearish {
+        box-shadow: 0 0 25px rgba(255, 70, 70, 0.35);
+        border: 1px solid rgba(255, 70, 70, 0.45);
+    }
+
+    .sideways {
+        box-shadow: 0 0 25px rgba(88, 166, 255, 0.35);
+        border: 1px solid rgba(88, 166, 255, 0.45);
+    }
+
+    /* =========================
+       KPI ANIMATION
+    ==========================*/
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.03); }
+        100% { transform: scale(1); }
+    }
+
+    .pulse {
+        animation: pulse 1.5s ease-in-out;
+    }
+
+    /* =========================
+       BADGES
+    ==========================*/
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        margin-right: 6px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    """
+    <style>
+    /* =========================
        GLOBAL BACKGROUND
     ==========================*/
     .stApp {
         background:
             linear-gradient(rgba(12, 18, 28, 0.9), rgba(12, 18, 28, 0.9)),
-            url("https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3");
+            url("https://images.pexels.com/photos/7947709/pexels-photo-7947709.jpeg");
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
