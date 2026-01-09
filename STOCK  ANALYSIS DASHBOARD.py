@@ -15,8 +15,13 @@ st.set_page_config(page_title="📈 Trading Dashboard", layout="wide")
 # DATABASE CONNECTION (UPDATED)
 # ===============================
 engine = create_engine(
-    "mysql+mysqlconnector://root:vEPAaOkJmeIXmmcmHoqcyypVlstWBGyb@nozomi.proxy.rlwy.net:32187/railway"
+    f"mysql+mysqlconnector://{st.secrets['mysql']['user']}:"
+    f"{quote_plus(st.secrets['mysql']['password'])}@"
+    f"{st.secrets['mysql']['host']}:"
+    f"{st.secrets['mysql']['port']}/"
+    f"{st.secrets['mysql']['database']}"
 )
+
 
 MARKET_BACKGROUNDS = {
     "India 🇮🇳": "https://images.unsplash.com/photo-1581092334494-5c7b3e1b5f4a",
