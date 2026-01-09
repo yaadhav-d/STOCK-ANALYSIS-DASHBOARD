@@ -89,36 +89,30 @@ def fetch_and_store_yahoo(symbol, period="6mo"):
 def fetch_and_store_banknifty():
     api_key = st.secrets["finnhub"]["api_key"]
 
-    url = "https://finnhub.io/api/v1/index/candle"
+    url = "https://finnhub.io/api/v1/quote"
     params = {
-        "symbol": "NSE:NIFTYBANK",
-        "resolution": "D",
-        "from": int(datetime.now().timestamp()) - 86400 * 180,
-        "to": int(datetime.now().timestamp()),
+        "symbol": "NSEBANK",
         "token": api_key
     }
 
     r = requests.get(url, params=params)
     data = r.json()
 
-    if data.get("s") != "ok":
+    # Finnhub returns 0 if no data
+    if data.get("c", 0) == 0:
         return
 
-    df = pd.DataFrame({
-        "timestamp": pd.to_datetime(data["t"], unit="s"),
+    now = pd.Timestamp.utcnow().floor("D")
+
+    df = pd.DataFrame([{
+        "symbol": "^NSEBANK",
+        "timestamp": now,
         "open_price": data["o"],
         "high_price": data["h"],
         "low_price": data["l"],
         "close_price": data["c"],
-        "volume": data["v"]
-    })
-
-    df["symbol"] = "^NSEBANK"
-    df = df[[
-        "symbol", "timestamp",
-        "open_price", "high_price",
-        "low_price", "close_price", "volume"
-    ]]
+        "volume": data.get("v", 0)
+    }])
 
     df.drop_duplicates(subset=["symbol", "timestamp"], inplace=True)
     df.to_sql("stock_prices", engine, if_exists="append", index=False)
