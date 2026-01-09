@@ -23,7 +23,7 @@ engine = create_engine(
 )
 
 # ===============================
-# SYMBOL CONFIG (STABLE ONLY)
+# SYMBOL CONFIG
 # ===============================
 TOP_INDIA_SYMBOLS = {
     "NIFTY 50": "^NSEI",
@@ -44,7 +44,6 @@ MARKETS = {
     }
 }
 
-
 PERIOD_TO_DAYS = {
     "1 Month": "1mo",
     "3 Months": "3mo",
@@ -53,7 +52,7 @@ PERIOD_TO_DAYS = {
 }
 
 # ===============================
-# YAHOO → DB INSERT (SAFE)
+# YAHOO → DB INSERT
 # ===============================
 def fetch_and_store(symbol, period="6mo"):
     try:
@@ -67,7 +66,6 @@ def fetch_and_store(symbol, period="6mo"):
         return
 
     df.reset_index(inplace=True)
-
     df.rename(columns={
         "Date": "timestamp",
         "Open": "open_price",
@@ -78,11 +76,11 @@ def fetch_and_store(symbol, period="6mo"):
     }, inplace=True)
 
     df["symbol"] = symbol
-    df = df[
-        ["symbol", "timestamp",
-         "open_price", "high_price",
-         "low_price", "close_price", "volume"]
-    ]
+    df = df[[
+        "symbol", "timestamp",
+        "open_price", "high_price",
+        "low_price", "close_price", "volume"
+    ]]
 
     df.drop_duplicates(subset=["symbol", "timestamp"], inplace=True)
     df.to_sql("stock_prices", engine, if_exists="append", index=False)
@@ -93,8 +91,7 @@ def fetch_and_store(symbol, period="6mo"):
 def ensure_initial_data():
     try:
         count = pd.read_sql(
-            "SELECT COUNT(*) AS c FROM stock_prices",
-            engine
+            "SELECT COUNT(*) AS c FROM stock_prices", engine
         )["c"][0]
     except Exception:
         count = 0
@@ -107,15 +104,11 @@ def ensure_initial_data():
 ensure_initial_data()
 
 # ===============================
-# DB READ HELPERS
+# DB HELPERS
 # ===============================
 def load_stock(symbol):
     return pd.read_sql(
-        f"""
-        SELECT * FROM stock_prices
-        WHERE symbol='{symbol}'
-        ORDER BY timestamp
-        """,
+        f"SELECT * FROM stock_prices WHERE symbol='{symbol}' ORDER BY timestamp",
         engine
     )
 
@@ -129,25 +122,18 @@ def get_change(symbol):
         """,
         engine
     )
-
     if len(df) < 2:
         return None
-
     latest, prev = df.iloc[0][0], df.iloc[1][0]
-    change = latest - prev
-    pct = (change / prev) * 100
-
-    return round(latest, 2), round(change, 2), round(pct, 2)
+    return round(latest,2), round(latest-prev,2), round((latest-prev)/prev*100,2)
 
 # ===============================
 # SIDEBAR
 # ===============================
 st.sidebar.title("⚙ Controls")
-
 market = st.sidebar.selectbox("Market", MARKETS.keys())
 stock_name = st.sidebar.selectbox("Stock", MARKETS[market].keys())
 symbol = MARKETS[market][stock_name]
-
 period_label = st.sidebar.selectbox("Period", PERIOD_TO_DAYS.keys())
 refresh = st.sidebar.button("🔄 Refresh Data")
 
@@ -158,33 +144,59 @@ if refresh:
 # MARKET SNAPSHOT
 # ===============================
 st.markdown("## 📊 Market Snapshot")
-
 cols = st.columns(len(TOP_INDIA_SYMBOLS))
-
 for col, (name, sym) in zip(cols, TOP_INDIA_SYMBOLS.items()):
     data = get_change(sym)
     with col:
         if not data:
             st.metric(name, "N/A")
         else:
-            price, change, pct = data
-            arrow = "🔺" if change > 0 else "🔻"
+            price, chg, pct = data
+            arrow = "🔺" if chg > 0 else "🔻"
             st.metric(name, price, f"{arrow} {pct}%")
 
 # ===============================
-# LOAD SELECTED STOCK
+# LOAD STOCK DATA
 # ===============================
 df = load_stock(symbol)
-
 if df.empty:
-    st.warning("No stock data available yet.")
+    st.warning("No data available.")
     st.stop()
 
 # ===============================
-# INDICATORS
+# TECHNICAL INDICATORS
 # ===============================
 df["SMA20"] = df["close_price"].rolling(20).mean()
+df["SMA50"] = df["close_price"].rolling(50).mean()
+df["SMA200"] = df["close_price"].rolling(200).mean()
 df["EMA20"] = df["close_price"].ewm(span=20).mean()
+
+# ===============================
+# TREND ANALYSIS
+# ===============================
+latest = df.iloc[-1]
+
+if latest["close_price"] > latest["SMA50"] > latest["SMA200"]:
+    trend = "Bullish"
+    strength = "Strong"
+elif latest["close_price"] < latest["SMA50"] < latest["SMA200"]:
+    trend = "Bearish"
+    strength = "Strong"
+else:
+    trend = "Sideways"
+    strength = "Weak"
+
+support = df["low_price"].rolling(20).min().iloc[-1]
+resistance = df["high_price"].rolling(20).max().iloc[-1]
+
+# ===============================
+# SHORT-TERM FORECAST (SAFE)
+# ===============================
+mean_price = df["close_price"].rolling(20).mean().iloc[-1]
+std_dev = df["close_price"].rolling(20).std().iloc[-1]
+
+forecast_low = round(mean_price - std_dev, 2)
+forecast_high = round(mean_price + std_dev, 2)
 
 # ===============================
 # DASHBOARD
@@ -193,7 +205,6 @@ left, right = st.columns([4, 1.5])
 
 with left:
     fig = go.Figure()
-
     fig.add_trace(go.Candlestick(
         x=df["timestamp"],
         open=df["open_price"],
@@ -201,23 +212,22 @@ with left:
         low=df["low_price"],
         close=df["close_price"]
     ))
-
     fig.add_trace(go.Scatter(x=df["timestamp"], y=df["SMA20"], name="SMA 20"))
     fig.add_trace(go.Scatter(x=df["timestamp"], y=df["EMA20"], name="EMA 20"))
-
-    fig.update_layout(
-        template="plotly_dark",
-        height=700,
-        xaxis_rangeslider_visible=False
+    fig.add_hrect(
+        y0=forecast_low, y1=forecast_high,
+        fillcolor="green", opacity=0.08, line_width=0
     )
-
+    fig.update_layout(template="plotly_dark", height=700, xaxis_rangeslider_visible=False)
     st.plotly_chart(fig, use_container_width=True)
 
 with right:
-    st.markdown("### 📊 Stats")
-    st.metric("Last Price", round(df["close_price"].iloc[-1], 2))
-    st.metric("High", round(df["high_price"].max(), 2))
-    st.metric("Low", round(df["low_price"].min(), 2))
-    st.metric("Volume", int(df["volume"].iloc[-1]))
+    st.markdown("### 📊 Trend Analysis")
+    st.metric("Trend", trend)
+    st.metric("Momentum", strength)
+    st.metric("Support", round(support,2))
+    st.metric("Resistance", round(resistance,2))
+    st.markdown("### 🔮 Short-Term Forecast (5-Day)")
+    st.metric("Expected Range", f"{forecast_low} – {forecast_high}")
 
-st.caption("⚡ Stable Yahoo Finance–based Trading Dashboard")
+st.caption("⚠ Forecast is statistical, not financial advice | DB-driven analytics")
